@@ -1,5 +1,9 @@
+from src.main import start
+
+
 def main():
-    print("Hello from multi-agent-for-impact-assesment!")
+    """Start the FastAPI application."""
+    start()
 
 
 if __name__ == "__main__":
