@@ -1,73 +1,41 @@
-from typing import Dict, List, Optional
-from pydantic import Field, field_validator
+"""Schemas for aggregate score calculation."""
+from typing import Dict
+from pydantic import Field
 
 from src.llm.dependancy.base import BaseInput, BaseOutput
 
 
 class AggregateScoreInput(BaseInput):
-    """Input schema for aggregate score calculation.
+    """Input for the aggregate score calculation chain."""
     
-    Used to calculate a weighted average of scores from the current prefecture and its neighbors.
-    """
-    agent_id: str = Field(
-        ..., 
-        description="The prefecture ID for which to calculate the aggregate score."
-    )
-    ad_id: str = Field(
-        ..., 
-        description="The ID of the advertisement."
-    )
     own_scores: Dict[str, float] = Field(
-        ..., 
-        description="The prefecture's own scores: {'liking': float, 'purchase_intent': float}"
+        description="The agent's own scores for liking and purchase intent"
     )
     neighbor_scores: Dict[str, Dict[str, float]] = Field(
-        ..., 
-        description="Scores from neighboring prefectures: {neighbor_id: {'liking': float, 'purchase_intent': float}, ...}"
+        description="Scores from neighboring prefectures"
     )
-    weights: Optional[Dict[str, float]] = Field(
-        None, 
-        description="Optional custom weights for each prefecture: {prefecture_id: weight, ...}. Default is equal weights."
+    agent_profile: Dict = Field(
+        description="Profile information about the agent/region"
     )
-
+    
 
 class AggregateScoreOutput(BaseOutput):
-    """Output schema for aggregate score calculation.
+    """Output from the aggregate score calculation chain."""
     
-    Provides the weighted average scores and the breakdown of contributions.
-    """
-    agent_id: str = Field(
-        ..., 
-        description="The prefecture ID for which the aggregate score was calculated."
-    )
-    ad_id: str = Field(
-        ..., 
-        description="The ID of the advertisement."
-    )
     aggregate_liking: float = Field(
-        ..., 
-        description="The aggregate liking score (0.0-5.0).",
+        description="Aggregated liking score incorporating neighbor scores (0-5)",
         ge=0.0,
         le=5.0
     )
     aggregate_purchase_intent: float = Field(
-        ..., 
-        description="The aggregate purchase intent score (0.0-5.0).",
+        description="Aggregated purchase intent score incorporating neighbor scores (0-5)",
         ge=0.0,
         le=5.0
     )
-    weights_used: Dict[str, float] = Field(
-        ..., 
-        description="The weights used for each prefecture."
+    weighting_explanation: str = Field(
+        description="Explanation of how neighbors were weighted in the aggregation"
     )
-    neighbors_used: List[str] = Field(
-        ..., 
-        description="List of neighboring prefecture IDs used in the calculation."
+    neighbor_influence: Dict[str, float] = Field(
+        description="Influence weight of each neighbor on the final scores",
+        default_factory=dict
     )
-    
-    @field_validator('aggregate_liking', 'aggregate_purchase_intent')
-    def validate_score_range(cls, v):
-        """Ensure scores are within allowed range."""
-        if not 0.0 <= v <= 5.0:
-            raise ValueError(f"Score must be between 0.0 and 5.0, got {v}")
-        return v

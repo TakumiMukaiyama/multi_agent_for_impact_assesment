@@ -1,89 +1,58 @@
+"""Schemas for ad history analysis."""
 from typing import Dict, List, Optional
+from pydantic import Field
 from datetime import datetime
-from pydantic import BaseModel, Field
 
 from src.llm.dependancy.base import BaseInput, BaseOutput
 
 
 class AdHistoryInput(BaseInput):
-    """Input schema for fetching advertisement history.
+    """Input for the ad history analysis chain."""
     
-    Used to retrieve the history of advertisements shown in a specific prefecture.
-    """
-    agent_id: str = Field(
-        ..., 
-        description="The prefecture ID for which to fetch advertisement history."
+    agent_id: str = Field(description="The agent ID (prefecture) to retrieve ad history for")
+    ad_category: Optional[str] = Field(
+        default=None,
+        description="Optional category to filter ads by"
     )
-    limit: int = Field(
-        10, 
-        description="Maximum number of advertisements to retrieve.",
-        ge=1,
-        le=100
+    limit: Optional[int] = Field(
+        default=10,
+        description="Maximum number of historical ads to retrieve"
     )
-    category: Optional[str] = Field(
-        None, 
-        description="Optional category filter for the advertisements."
-    )
-    start_date: Optional[datetime] = Field(
-        None, 
-        description="Optional start date for filtering advertisements."
-    )
-    end_date: Optional[datetime] = Field(
-        None, 
-        description="Optional end date for filtering advertisements."
-    )
+    
 
-
-class AdHistoryItem(BaseModel):
-    """Individual advertisement history item."""
-    ad_id: str = Field(
-        ..., 
-        description="The advertisement ID."
-    )
-    title: str = Field(
-        ..., 
-        description="The advertisement title."
-    )
-    content: str = Field(
-        ..., 
-        description="The advertisement content."
-    )
-    category: Optional[str] = Field(
-        None, 
-        description="The advertisement category."
-    )
-    shown_at: datetime = Field(
-        ..., 
-        description="The date and time when the advertisement was shown."
-    )
+class HistoricalAd(BaseOutput):
+    """Structure for a single historical ad."""
+    
+    ad_id: str = Field(description="Unique identifier for the advertisement")
+    content: str = Field(description="Content of the advertisement")
+    category: Optional[str] = Field(description="Category of the advertisement")
+    shown_at: datetime = Field(description="When the ad was shown")
     liking_score: Optional[float] = Field(
-        None, 
-        description="The liking score if evaluated."
+        default=None,
+        description="Liking score if available (0-5)"
     )
     purchase_intent_score: Optional[float] = Field(
-        None, 
-        description="The purchase intent score if evaluated."
+        default=None,
+        description="Purchase intent score if available (0-5)"
     )
 
 
 class AdHistoryOutput(BaseOutput):
-    """Output schema for advertisement history.
+    """Output from the ad history analysis chain."""
     
-    Provides a list of advertisements shown in the prefecture.
-    """
-    agent_id: str = Field(
-        ..., 
-        description="The prefecture ID for which the history was fetched."
+    ads: List[HistoricalAd] = Field(
+        description="List of historical ads",
+        default_factory=list
     )
-    total_count: int = Field(
-        ..., 
-        description="Total number of advertisements matching the criteria."
+    average_liking: Optional[float] = Field(
+        default=None,
+        description="Average liking score of historical ads (if scores available)"
     )
-    ads: List[AdHistoryItem] = Field(
-        ..., 
-        description="List of advertisements in the history."
+    average_purchase_intent: Optional[float] = Field(
+        default=None,
+        description="Average purchase intent score of historical ads (if scores available)"
     )
-    category_counts: Dict[str, int] = Field(
-        ..., 
-        description="Count of advertisements per category."
+    category_distribution: Optional[Dict[str, int]] = Field(
+        default=None,
+        description="Distribution of ad categories in history"
     )
