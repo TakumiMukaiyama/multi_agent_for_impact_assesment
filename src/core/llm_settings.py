@@ -1,15 +1,7 @@
-from enum import Enum
 from typing import Dict, Union
 from pydantic import BaseModel, Field, SecretStr
 
-
-class LLMProviderType(str, Enum):
-    """Supported LLM provider types."""
-
-    AZURE_OPENAI = "azure_openai"
-    OPENAI = "openai"
-    GEMINI = "gemini"
-    NOMUCHAT = "nomuchat"
+from src.core.constants import LLMProviderType
 
 
 class BaseProviderSettings(BaseModel):
@@ -39,12 +31,6 @@ class GeminiSettings(BaseProviderSettings):
     model_name: str = Field(default="gemini-pro")
 
 
-class NomuchatSettings(BaseProviderSettings):
-    """Nomuchat specific settings."""
-
-    endpoint: str = Field(default="")
-    model_name: str = Field(default="")
-
 
 class LLMSettings(BaseModel):
     """LLM settings for the application."""
@@ -52,13 +38,12 @@ class LLMSettings(BaseModel):
     default_provider: LLMProviderType = Field(default=LLMProviderType.OPENAI)
     providers: Dict[
         LLMProviderType,
-        Union[AzureOpenAISettings, OpenAISettings, GeminiSettings, NomuchatSettings],
+        Union[AzureOpenAISettings, OpenAISettings, GeminiSettings],
     ] = Field(
         default_factory=lambda: {
             LLMProviderType.AZURE_OPENAI: AzureOpenAISettings(),
             LLMProviderType.OPENAI: OpenAISettings(),
             LLMProviderType.GEMINI: GeminiSettings(),
-            LLMProviderType.NOMUCHAT: NomuchatSettings(),
         }
     )
 
@@ -98,13 +83,6 @@ class LLMSettings(BaseModel):
             model_name=environ.get("GEMINI_MODEL_NAME", "gemini-pro"),
         )
 
-        # Nomuchat settings
-        nomuchat = NomuchatSettings(
-            enabled=environ.get("NOMUCHAT_ENABLED", "false").lower() == "true",
-            api_key=SecretStr(environ.get("NOMUCHAT_API_KEY", "")),
-            endpoint=environ.get("NOMUCHAT_ENDPOINT", ""),
-            model_name=environ.get("NOMUCHAT_MODEL_NAME", ""),
-        )
 
         return cls(
             default_provider=default_provider,
@@ -112,6 +90,7 @@ class LLMSettings(BaseModel):
                 LLMProviderType.AZURE_OPENAI: azure_openai,
                 LLMProviderType.OPENAI: openai,
                 LLMProviderType.GEMINI: gemini,
-                LLMProviderType.NOMUCHAT: nomuchat,
             },
         )
+    
+llm_settings = LLMSettings.from_env()
