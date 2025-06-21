@@ -148,6 +148,9 @@ project_root/
     │   ├── client/              
     │   │   ├── azure_openai_client.py
     │   │   └── gemini_client.py
+    │   └── schema/
+    │   │   ├── {schema_name}.py
+    │   │   └── {schema_name}.py
     │   └── chain/
     │       └── pydantic_chain.py
     │   
