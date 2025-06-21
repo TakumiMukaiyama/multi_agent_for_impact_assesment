@@ -105,9 +105,30 @@ class PydanticChain:
         if not isinstance(inputs, self.input_schema):
             raise ValueError(f"Input must be instance of {self.input_schema.__name__}")
 
+        # Convert input to dict
+        input_dict = inputs.model_dump()
+
+        # Special handling for neighbor_scores formatting
+        if "neighbor_scores" in input_dict:
+            neighbor_scores = input_dict["neighbor_scores"]
+            if neighbor_scores is None:
+                input_dict["neighbor_scores"] = "No neighboring prefecture evaluations available."
+            elif isinstance(neighbor_scores, dict):
+                # Format neighbor scores as string
+                neighbor_lines = []
+                for neighbor, scores in neighbor_scores.items():
+                    if isinstance(scores, dict):
+                        line = f"- {neighbor}: Liking: {scores.get('liking', 'N/A')}, Purchase Intent: {scores.get('purchase_intent', 'N/A')}"
+                    else:
+                        line = f"- {neighbor}: {scores}"
+                    neighbor_lines.append(line)
+                input_dict["neighbor_scores"] = (
+                    "\n".join(neighbor_lines) if neighbor_lines else "No neighboring prefecture evaluations available."
+                )
+
         # Invoke chain with validated input
         return self.chain.invoke(
-            inputs.model_dump(),
+            input_dict,
             **kwargs,
         )
 
