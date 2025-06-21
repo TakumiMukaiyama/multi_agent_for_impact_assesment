@@ -1,105 +1,227 @@
-from typing import Dict, Any, Type
-from pydantic import BaseModel, Field
+"""Tool for accessing local statistics and demographic data."""
 
-from langchain.tools import BaseTool
+from typing import Any, Dict, List, Optional
 
-from src.agents.persona_factory import PersonaFactory
+from pydantic import Field
+
+from src.agents.tools.base import BaseAgentTool, ToolInput, ToolOutput
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
-class AccessLocalStatisticsInput(BaseModel):
-    """Input for the access_local_statistics tool."""
-    agent_id: str = Field(..., description="The prefecture ID to get statistics for.")
+class AccessLocalStatisticsInput(ToolInput):
+    """Input for accessing local statistics."""
+
+    agent_id: str = Field(description="ID of the agent (prefecture)")
+    statistic_type: Optional[str] = Field(
+        description="Type of statistic to retrieve (e.g., 'demographics', 'economy', 'lifestyle')", default="general"
+    )
 
 
-class AccessLocalStatisticsTool(BaseTool):
-    """Tool for accessing local statistics about a prefecture."""
-    
-    name = "access_local_statistics"
-    description = """
-    Access detailed statistics for the specified prefecture, including demographic
-    information, consumer trends, and local economic indicators.
-    
-    INPUT:
-    agent_id: The prefecture ID (e.g., "Tokyo")
-    
-    OUTPUT:
-    A dictionary containing detailed statistics about the prefecture.
-    """
-    args_schema: Type[BaseModel] = AccessLocalStatisticsInput
-    
-    def _run(self, agent_id: str) -> Dict[str, Any]:
-        """Get detailed statistics for a prefecture.
-        
-        Args:
-            agent_id: The prefecture ID to get statistics for.
-        
-        Returns:
-            A dictionary containing detailed statistics about the prefecture.
-        """
-        # In a real implementation, we would query a database to get
-        # detailed statistics about the prefecture. For now, we'll just
-        # return the persona information plus some mock data.
-        
-        # Get the base persona
-        if agent_id not in PersonaFactory.PREFECTURES:
-            return {"error": f"Invalid prefecture ID: {agent_id}"}
-        
-        persona = PersonaFactory.create_persona(agent_id)
-        cluster = PersonaFactory.PREFECTURE_CLUSTERS.get(agent_id, "rural")
-        
-        # Add additional mock statistics
-        statistics = {
-            "demographics": {
-                "age_distribution": persona["age_distribution"],
-                "total_population": 1_000_000 + (hash(agent_id) % 10_000_000),
-                "population_density": 100 + (hash(f"{agent_id}_density") % 5000),
-                "gender_ratio": {"male": 0.48 + (hash(f"{agent_id}_gender") % 10) / 100, "female": 0.52 - (hash(f"{agent_id}_gender") % 10) / 100},
+class AccessLocalStatisticsOutput(ToolOutput):
+    """Output containing local statistics data."""
+
+    agent_id: str = Field(description="ID of the agent (prefecture)")
+    demographics: Dict[str, Any] = Field(description="Demographic information", default_factory=dict)
+    economic_indicators: Dict[str, Any] = Field(description="Economic indicators", default_factory=dict)
+    lifestyle_preferences: List[str] = Field(
+        description="Common lifestyle preferences in the region", default_factory=list
+    )
+    consumer_behavior: Dict[str, Any] = Field(description="Consumer behavior patterns", default_factory=dict)
+    regional_characteristics: List[str] = Field(description="Key characteristics of the region", default_factory=list)
+
+
+class AccessLocalStatistics(BaseAgentTool[AccessLocalStatisticsInput, AccessLocalStatisticsOutput]):
+    """Tool for accessing local statistics and demographic data."""
+
+    def __init__(self):
+        """Initialize the tool."""
+        super().__init__(
+            name="access_local_statistics",
+            description="Access local statistics and demographic data for a prefecture. Requires agent_id. Optional: statistic_type.",
+        )
+
+        # Mock statistics data (in real implementation, this would come from a database)
+        self.statistics_data = {
+            "Tokyo": {
+                "demographics": {
+                    "population": 14000000,
+                    "age_distribution": {"0-14": 0.12, "15-24": 0.09, "25-54": 0.37, "55-64": 0.12, "65+": 0.30},
+                    "household_income": 6200000,  # yen
+                    "urban_ratio": 1.0,
+                },
+                "economic_indicators": {
+                    "gdp_per_capita": 5500000,  # yen
+                    "unemployment_rate": 0.025,
+                    "major_industries": ["finance", "technology", "services"],
+                },
+                "lifestyle_preferences": ["tech-savvy", "quality-oriented", "luxury-oriented", "convenience-focused"],
+                "consumer_behavior": {"online_shopping_ratio": 0.8, "brand_loyalty": 0.6, "price_sensitivity": 0.3},
+                "regional_characteristics": [
+                    "highly urbanized",
+                    "global outlook",
+                    "trend-setting",
+                    "fast-paced lifestyle",
+                ],
             },
-            "economy": {
-                "average_income": 4_000_000 + (hash(f"{agent_id}_income") % 4_000_000),
-                "unemployment_rate": 0.02 + (hash(f"{agent_id}_unemployment") % 10) / 100,
-                "major_industries": self._get_major_industries(cluster),
+            "Osaka": {
+                "demographics": {
+                    "population": 8800000,
+                    "age_distribution": {"0-14": 0.12, "15-24": 0.09, "25-54": 0.36, "55-64": 0.13, "65+": 0.30},
+                    "household_income": 5500000,  # yen
+                    "urban_ratio": 0.9,
+                },
+                "economic_indicators": {
+                    "gdp_per_capita": 4800000,  # yen
+                    "unemployment_rate": 0.028,
+                    "major_industries": ["manufacturing", "trade", "food"],
+                },
+                "lifestyle_preferences": ["price-sensitive", "traditional", "food-loving", "pragmatic"],
+                "consumer_behavior": {"online_shopping_ratio": 0.7, "brand_loyalty": 0.5, "price_sensitivity": 0.7},
+                "regional_characteristics": [
+                    "merchant culture",
+                    "food-focused",
+                    "practical approach",
+                    "value-conscious",
+                ],
             },
-            "consumer_trends": {
-                "preferences": persona["preferences"],
-                "spending_categories": self._get_spending_categories(cluster),
+            "Hokkaido": {
+                "demographics": {
+                    "population": 5200000,
+                    "age_distribution": {"0-14": 0.11, "15-24": 0.08, "25-54": 0.34, "55-64": 0.14, "65+": 0.33},
+                    "household_income": 4500000,  # yen
+                    "urban_ratio": 0.6,
+                },
+                "economic_indicators": {
+                    "gdp_per_capita": 3800000,  # yen
+                    "unemployment_rate": 0.032,
+                    "major_industries": ["agriculture", "tourism", "manufacturing"],
+                },
+                "lifestyle_preferences": [
+                    "traditional",
+                    "environmentally-conscious",
+                    "outdoor-oriented",
+                    "community-focused",
+                ],
+                "consumer_behavior": {"online_shopping_ratio": 0.6, "brand_loyalty": 0.7, "price_sensitivity": 0.6},
+                "regional_characteristics": [
+                    "nature-oriented",
+                    "community bonds",
+                    "seasonal lifestyle",
+                    "agricultural heritage",
+                ],
             },
-            "geography": {
-                "region": persona["region"],
-                "area_sqkm": 1000 + (hash(f"{agent_id}_area") % 80_000),
-                "coastline": agent_id in ["Hokkaido", "Aomori", "Iwate", "Miyagi", "Chiba", "Tokyo", "Kanagawa", "Shizuoka", "Mie", "Wakayama", "Osaka", "Hyogo", "Tottori", "Shimane", "Yamaguchi", "Kagawa", "Ehime", "Kochi", "Fukuoka", "Saga", "Nagasaki", "Kumamoto", "Oita", "Miyazaki", "Kagoshima", "Okinawa"],
-                "mountainous": agent_id in ["Nagano", "Yamanashi", "Gifu", "Toyama", "Niigata", "Fukushima", "Gunma"],
+            "Kyoto": {
+                "demographics": {
+                    "population": 2500000,
+                    "age_distribution": {"0-14": 0.10, "15-24": 0.10, "25-54": 0.32, "55-64": 0.14, "65+": 0.34},
+                    "household_income": 5000000,  # yen
+                    "urban_ratio": 0.8,
+                },
+                "economic_indicators": {
+                    "gdp_per_capita": 4500000,  # yen
+                    "unemployment_rate": 0.025,
+                    "major_industries": ["tourism", "traditional_crafts", "education"],
+                },
+                "lifestyle_preferences": ["traditional", "quality-oriented", "culture-oriented", "aesthetics-focused"],
+                "consumer_behavior": {"online_shopping_ratio": 0.65, "brand_loyalty": 0.8, "price_sensitivity": 0.4},
+                "regional_characteristics": [
+                    "cultural heritage",
+                    "tradition-preservation",
+                    "aesthetic values",
+                    "tourism-centric",
+                ],
             },
         }
-        
-        return statistics
-    
-    async def _arun(self, agent_id: str) -> Dict[str, Any]:
-        """Async version of _run."""
-        return self._run(agent_id=agent_id)
-    
-    def _get_major_industries(self, cluster: str) -> Dict[str, float]:
-        """Get major industries based on the prefecture cluster."""
-        if cluster == "urban":
-            return {"finance": 0.8, "technology": 0.9, "services": 0.8, "manufacturing": 0.6, "tourism": 0.7}
-        elif cluster == "suburban":
-            return {"manufacturing": 0.8, "services": 0.7, "retail": 0.7, "logistics": 0.6, "tourism": 0.6}
-        elif cluster == "rural":
-            return {"agriculture": 0.9, "manufacturing": 0.5, "tourism": 0.6, "forestry": 0.7, "fishing": 0.4}
-        elif cluster == "elderly":
-            return {"agriculture": 0.7, "healthcare": 0.8, "tourism": 0.5, "traditional_crafts": 0.7, "retirement_services": 0.8}
-        else:  # youthful
-            return {"technology": 0.7, "tourism": 0.9, "services": 0.8, "education": 0.7, "entertainment": 0.8}
-    
-    def _get_spending_categories(self, cluster: str) -> Dict[str, float]:
-        """Get spending categories based on the prefecture cluster."""
-        if cluster == "urban":
-            return {"dining_out": 0.8, "entertainment": 0.8, "fashion": 0.8, "technology": 0.9, "housing": 0.9}
-        elif cluster == "suburban":
-            return {"groceries": 0.7, "transportation": 0.8, "education": 0.7, "housing": 0.8, "healthcare": 0.6}
-        elif cluster == "rural":
-            return {"groceries": 0.8, "utilities": 0.7, "transportation": 0.7, "healthcare": 0.6, "agriculture": 0.6}
-        elif cluster == "elderly":
-            return {"healthcare": 0.9, "groceries": 0.7, "utilities": 0.8, "traditional_goods": 0.7, "gifts": 0.6}
-        else:  # youthful
-            return {"entertainment": 0.9, "dining_out": 0.8, "fashion": 0.9, "technology": 0.8, "travel": 0.7}
+
+    async def execute(self, input_data: AccessLocalStatisticsInput) -> AccessLocalStatisticsOutput:
+        """Execute the tool to access local statistics.
+
+        Args:
+            input_data: Input containing agent_id and statistic type
+
+        Returns:
+            Output containing local statistics
+        """
+        agent_id = input_data.agent_id
+        statistic_type = input_data.statistic_type or "general"
+
+        try:
+            # Get statistics data for the specified agent
+            agent_stats = self.statistics_data.get(agent_id, {})
+
+            if not agent_stats:
+                logger.warning(f"No statistics found for agent {agent_id}")
+                return AccessLocalStatisticsOutput(
+                    success=False,
+                    message=f"No statistics available for {agent_id}",
+                    agent_id=agent_id,
+                    demographics={},
+                    economic_indicators={},
+                    lifestyle_preferences=[],
+                    consumer_behavior={},
+                    regional_characteristics=[],
+                )
+
+            # Filter by statistic type if specified
+            if statistic_type == "demographics":
+                # Return only demographics
+                output = AccessLocalStatisticsOutput(
+                    success=True,
+                    agent_id=agent_id,
+                    demographics=agent_stats.get("demographics", {}),
+                    economic_indicators={},
+                    lifestyle_preferences=[],
+                    consumer_behavior={},
+                    regional_characteristics=[],
+                )
+            elif statistic_type == "economy":
+                # Return only economic data
+                output = AccessLocalStatisticsOutput(
+                    success=True,
+                    agent_id=agent_id,
+                    demographics={},
+                    economic_indicators=agent_stats.get("economic_indicators", {}),
+                    lifestyle_preferences=[],
+                    consumer_behavior=agent_stats.get("consumer_behavior", {}),
+                    regional_characteristics=[],
+                )
+            elif statistic_type == "lifestyle":
+                # Return lifestyle and preferences
+                output = AccessLocalStatisticsOutput(
+                    success=True,
+                    agent_id=agent_id,
+                    demographics={},
+                    economic_indicators={},
+                    lifestyle_preferences=agent_stats.get("lifestyle_preferences", []),
+                    consumer_behavior=agent_stats.get("consumer_behavior", {}),
+                    regional_characteristics=agent_stats.get("regional_characteristics", []),
+                )
+            else:
+                # Return all statistics (general)
+                output = AccessLocalStatisticsOutput(
+                    success=True,
+                    agent_id=agent_id,
+                    demographics=agent_stats.get("demographics", {}),
+                    economic_indicators=agent_stats.get("economic_indicators", {}),
+                    lifestyle_preferences=agent_stats.get("lifestyle_preferences", []),
+                    consumer_behavior=agent_stats.get("consumer_behavior", {}),
+                    regional_characteristics=agent_stats.get("regional_characteristics", []),
+                )
+
+            logger.info(f"Retrieved {statistic_type} statistics for agent {agent_id}")
+            return output
+
+        except Exception as e:
+            logger.error(f"Error accessing statistics for {agent_id}: {e}")
+            return AccessLocalStatisticsOutput(
+                success=False,
+                message=f"Failed to access statistics: {str(e)}",
+                agent_id=agent_id,
+                demographics={},
+                economic_indicators={},
+                lifestyle_preferences=[],
+                consumer_behavior={},
+                regional_characteristics=[],
+            )
