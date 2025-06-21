@@ -1,61 +1,38 @@
-"""Schemas for fetch_previous_ads tool."""
-from typing import Dict, List, Optional
+"""Schemas for fetch previous ads tool."""
 
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
+
+from pydantic import Field
 
 from src.agents.schemas.tools.base import ToolInput, ToolOutput
 
 
+class AdRecord(ToolOutput):
+    """Record of a previous advertisement."""
+
+    ad_id: str = Field(description="Advertisement ID")
+    ad_content: str = Field(description="Content of the advertisement")
+    category: str = Field(description="Category of the advertisement")
+    brand: Optional[str] = Field(description="Brand name", default=None)
+    created_date: str = Field(description="Creation date (ISO format)")
+    liking_scores: Dict[str, float] = Field(description="Liking scores from different regions", default_factory=dict)
+    purchase_intent_scores: Dict[str, float] = Field(
+        description="Purchase intent scores from different regions", default_factory=dict
+    )
+
+
 class FetchPreviousAdsInput(ToolInput):
-    """Input for fetching previous ads."""
-    
-    agent_id: str = Field(description="ID of the agent (prefecture)")
-    ad_category: Optional[str] = Field(
-        description="Optional category to filter ads by",
-        default=None
-    )
-    limit: int = Field(
-        description="Maximum number of ads to retrieve",
-        default=10,
-        ge=1,
-        le=50
-    )
+    """Input for fetching previous advertisements."""
 
-
-class AdRecord(BaseModel):
-    """Model for a single ad record."""
-    
-    ad_id: str = Field(description="Unique ID for the advertisement")
-    content: str = Field(description="Content of the advertisement")
-    category: Optional[str] = Field(description="Category of the advertisement", default=None)
-    shown_at: str = Field(description="When the ad was shown (ISO datetime)")
-    liking_score: Optional[float] = Field(
-        description="Average liking score if available (0-5)",
-        default=None
-    )
-    purchase_intent_score: Optional[float] = Field(
-        description="Average purchase intent score if available (0-5)",
-        default=None
-    )
+    agent_id: str = Field(description="ID of the agent requesting ads")
+    category: Optional[str] = Field(description="Category filter for advertisements", default=None)
+    brand: Optional[str] = Field(description="Brand filter for advertisements", default=None)
+    limit: Optional[int] = Field(description="Maximum number of ads to fetch", default=10, ge=1, le=100)
 
 
 class FetchPreviousAdsOutput(ToolOutput):
-    """Output containing fetched previous ads."""
-    
-    ads: List[AdRecord] = Field(
-        description="List of previous ads",
-        default_factory=list
-    )
-    total_count: int = Field(description="Total number of ads available")
-    average_liking: Optional[float] = Field(
-        description="Average liking score across all ads (if available)",
-        default=None
-    )
-    average_purchase_intent: Optional[float] = Field(
-        description="Average purchase intent score across all ads (if available)",
-        default=None
-    )
-    category_distribution: Optional[Dict[str, int]] = Field(
-        description="Distribution of ad categories",
-        default=None
-    )
+    """Output containing previous advertisements."""
+
+    ads: List[AdRecord] = Field(description="List of previous advertisements", default_factory=list)
+    total_count: int = Field(description="Total number of ads matching criteria")
+    filters_applied: Dict[str, Any] = Field(description="Filters that were applied", default_factory=dict)
