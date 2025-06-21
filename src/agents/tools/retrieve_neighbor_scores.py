@@ -1,48 +1,17 @@
 """Tool for retrieving scores from neighboring prefectures."""
 
-from typing import List, Optional
+from datetime import datetime, timedelta
+from typing import List
 
-from pydantic import Field
-
-from src.agents.tools.base import BaseAgentTool, ToolInput, ToolOutput
+from src.agents.schemas.tools.retrieve_neighbor_scores import (
+    NeighborScore,
+    RetrieveNeighborScoresInput,
+    RetrieveNeighborScoresOutput,
+)
+from src.agents.tools.base import BaseAgentTool
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-class NeighborScore(ToolOutput):
-    """Score data from a neighboring agent."""
-
-    neighbor_id: str = Field(description="ID of the neighboring agent")
-    ad_id: str = Field(description="ID of the advertisement")
-    liking_score: float = Field(description="Liking score from neighbor (0-5)", ge=0.0, le=5.0)
-    purchase_intent_score: float = Field(description="Purchase intent score from neighbor (0-5)", ge=0.0, le=5.0)
-    timestamp: str = Field(description="When the score was recorded (ISO format)")
-    confidence: Optional[float] = Field(
-        description="Confidence in the score quality (0-1)", default=None, ge=0.0, le=1.0
-    )
-
-
-class RetrieveNeighborScoresInput(ToolInput):
-    """Input for retrieving neighbor scores."""
-
-    agent_id: str = Field(description="ID of the requesting agent (prefecture)")
-    ad_id: str = Field(description="ID of the advertisement to get scores for")
-    max_neighbors: Optional[int] = Field(
-        description="Maximum number of neighbors to retrieve scores from", default=5, ge=1, le=20
-    )
-
-
-class RetrieveNeighborScoresOutput(ToolOutput):
-    """Output containing neighbor scores."""
-
-    neighbor_scores: List[NeighborScore] = Field(description="Scores from neighboring agents", default_factory=list)
-    neighbors_found: int = Field(description="Number of neighbors with scores found")
-    average_liking: Optional[float] = Field(description="Average liking score across neighbors", default=None)
-    average_purchase_intent: Optional[float] = Field(
-        description="Average purchase intent score across neighbors", default=None
-    )
-    neighbor_ids: List[str] = Field(description="List of neighbor IDs found", default_factory=list)
 
 
 class RetrieveNeighborScores(BaseAgentTool[RetrieveNeighborScoresInput, RetrieveNeighborScoresOutput]):
@@ -72,8 +41,6 @@ class RetrieveNeighborScores(BaseAgentTool[RetrieveNeighborScoresInput, Retrieve
         }
 
         # Mock score database (in real implementation, this would come from actual database)
-        from datetime import datetime, timedelta
-
         current_time = datetime.now()
 
         self.mock_scores = {
@@ -198,41 +165,39 @@ class RetrieveNeighborScores(BaseAgentTool[RetrieveNeighborScoresInput, Retrieve
 
             # Collect scores from neighbors (up to max_neighbors)
             for neighbor_id in neighbors[:max_neighbors]:
-                if neighbor_id in ad_scores and neighbor_id != agent_id:  # Don't include self
+                if neighbor_id in ad_scores:
                     score_data = ad_scores[neighbor_id]
-
                     neighbor_score = NeighborScore(
                         neighbor_id=neighbor_id,
                         ad_id=ad_id,
                         liking_score=score_data["liking"],
                         purchase_intent_score=score_data["purchase_intent"],
                         timestamp=score_data["timestamp"],
-                        confidence=0.8,  # Mock confidence value
+                        confidence=0.85,  # Mock confidence
                     )
-
                     neighbor_score_list.append(neighbor_score)
                     found_neighbor_ids.append(neighbor_id)
 
-            # Calculate averages
+            # Calculate averages if we have scores
+            average_liking = None
+            average_purchase_intent = None
+
             if neighbor_score_list:
-                avg_liking = sum(score.liking_score for score in neighbor_score_list) / len(neighbor_score_list)
-                avg_purchase_intent = sum(score.purchase_intent_score for score in neighbor_score_list) / len(
-                    neighbor_score_list
-                )
-            else:
-                avg_liking = None
-                avg_purchase_intent = None
+                total_liking = sum(score.liking_score for score in neighbor_score_list)
+                total_purchase_intent = sum(score.purchase_intent_score for score in neighbor_score_list)
+                count = len(neighbor_score_list)
 
-            neighbors_found = len(neighbor_score_list)
+                average_liking = total_liking / count
+                average_purchase_intent = total_purchase_intent / count
 
-            logger.info(f"Retrieved {neighbors_found} neighbor scores for agent {agent_id}")
+            logger.info(f"Retrieved {len(neighbor_score_list)} neighbor scores for agent {agent_id} on ad {ad_id}")
 
             return RetrieveNeighborScoresOutput(
                 success=True,
                 neighbor_scores=neighbor_score_list,
-                neighbors_found=neighbors_found,
-                average_liking=avg_liking,
-                average_purchase_intent=avg_purchase_intent,
+                neighbors_found=len(neighbor_score_list),
+                average_liking=average_liking,
+                average_purchase_intent=average_purchase_intent,
                 neighbor_ids=found_neighbor_ids,
             )
 
@@ -257,8 +222,6 @@ class RetrieveNeighborScores(BaseAgentTool[RetrieveNeighborScoresInput, Retrieve
             liking: Liking score
             purchase_intent: Purchase intent score
         """
-        from datetime import datetime
-
         if ad_id not in self.mock_scores:
             self.mock_scores[ad_id] = {}
 
@@ -268,7 +231,7 @@ class RetrieveNeighborScores(BaseAgentTool[RetrieveNeighborScoresInput, Retrieve
             "timestamp": datetime.now().isoformat(),
         }
 
-        logger.info(f"Added mock score for {agent_id} on {ad_id}: liking={liking}, purchase_intent={purchase_intent}")
+        logger.info(f"Added mock score for {agent_id} on {ad_id}")
 
     def get_neighbor_list(self, agent_id: str) -> List[str]:
         """Get the list of neighbors for an agent.

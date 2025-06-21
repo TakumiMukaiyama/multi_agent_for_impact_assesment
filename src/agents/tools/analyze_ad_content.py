@@ -1,38 +1,13 @@
 """Tool for analyzing ad content."""
 
-from typing import List
-
-from pydantic import Field
-
-from src.agents.tools.base import BaseAgentTool, ToolInput, ToolOutput
+from src.agents.schemas.tools.analyze_ad_content import AnalyzeAdContentInput, AnalyzeAdContentOutput
+from src.agents.tools.base import BaseAgentTool
 from src.llm.chain.pydantic_chain import PydanticChain
 from src.llm.prompts.ad_content import ad_content_analysis_prompt
 from src.llm.schema.ad_content_analysis import AdContentAnalysisInput, AdContentAnalysisOutput
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-class AnalyzeAdContentInput(ToolInput):
-    """Input for analyzing ad content."""
-
-    agent_id: str = Field(description="ID of the agent using the tool")
-    ad_content: str = Field(description="Content of the ad to analyze")
-
-
-class AnalyzeAdContentOutput(ToolOutput):
-    """Output containing ad content analysis."""
-
-    category: str = Field(description="Primary category of the advertisement")
-    subcategories: List[str] = Field(description="Secondary categories or tags", default_factory=list)
-    target_demographic: str = Field(description="Identified target demographic")
-    key_selling_points: List[str] = Field(description="Key selling points identified in the ad", default_factory=list)
-    emotional_appeal: str = Field(description="Type of emotional appeal used")
-    tone: str = Field(description="Overall tone of the advertisement")
-    price_emphasis: float = Field(description="Emphasis on price/value (0.0-1.0)", default=0.0, ge=0.0, le=1.0)
-    quality_emphasis: float = Field(
-        description="Emphasis on quality/premium aspects (0.0-1.0)", default=0.0, ge=0.0, le=1.0
-    )
 
 
 class AnalyzeAdContent(BaseAgentTool[AnalyzeAdContentInput, AnalyzeAdContentOutput]):

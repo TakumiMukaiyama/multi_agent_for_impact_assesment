@@ -1,42 +1,13 @@
 """Tool for generating detailed commentary on advertisements."""
 
-from typing import List, Optional
-
-from pydantic import Field
-
-from src.agents.tools.base import BaseAgentTool, ToolInput, ToolOutput
+from src.agents.schemas.tools.generate_commentary import GenerateCommentaryInput, GenerateCommentaryOutput
+from src.agents.tools.base import BaseAgentTool
 from src.llm.chain.pydantic_chain import PydanticChain
 from src.llm.prompts.commentary import commentary_generation_prompt
 from src.llm.schema.commentary_generation import CommentaryGenerationInput, CommentaryGenerationOutput
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-class GenerateCommentaryInput(ToolInput):
-    """Input for generating commentary on an advertisement."""
-
-    agent_id: str = Field(description="ID of the agent (prefecture)")
-    ad_content: str = Field(description="Content of the ad to comment on")
-    liking_score: Optional[float] = Field(description="Liking score (0-5)", default=3.0, ge=0.0, le=5.0)
-    purchase_intent_score: Optional[float] = Field(
-        description="Purchase intent score (0-5)", default=3.0, ge=0.0, le=5.0
-    )
-
-
-class GenerateCommentaryOutput(ToolOutput):
-    """Output containing generated commentary."""
-
-    commentary: str = Field(description="Detailed commentary on the advertisement")
-    positive_aspects: List[str] = Field(
-        description="Positive aspects of the ad from the region's perspective", default_factory=list
-    )
-    negative_aspects: List[str] = Field(
-        description="Negative aspects of the ad from the region's perspective", default_factory=list
-    )
-    improvement_suggestions: List[str] = Field(
-        description="Suggestions for improving the ad for this region", default_factory=list
-    )
 
 
 class GenerateCommentary(BaseAgentTool[GenerateCommentaryInput, GenerateCommentaryOutput]):

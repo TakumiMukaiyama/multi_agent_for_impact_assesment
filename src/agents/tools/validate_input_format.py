@@ -1,43 +1,16 @@
 """Tool for validating input format of advertisement data."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from pydantic import Field
-
-from src.agents.tools.base import BaseAgentTool, ToolInput, ToolOutput
+from src.agents.schemas.tools.validate_input_format import (
+    ValidateInputFormatInput,
+    ValidateInputFormatOutput,
+    ValidationResult,
+)
+from src.agents.tools.base import BaseAgentTool
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-class ValidationResult(ToolOutput):
-    """Result of a validation check."""
-
-    field_name: str = Field(description="Name of the field that was validated")
-    is_valid: bool = Field(description="Whether the field is valid")
-    error_message: Optional[str] = Field(description="Error message if validation failed", default=None)
-
-
-class ValidateInputFormatInput(ToolInput):
-    """Input for validating advertisement data format."""
-
-    agent_id: str = Field(description="ID of the agent performing validation")
-    ad_data: Dict[str, Any] = Field(description="Advertisement data to validate")
-    validation_type: Optional[str] = Field(
-        description="Type of validation to perform (e.g., 'basic', 'strict', 'content')", default="basic"
-    )
-
-
-class ValidateInputFormatOutput(ToolOutput):
-    """Output containing validation results."""
-
-    is_valid: bool = Field(description="Whether the overall input is valid")
-    validation_results: List[ValidationResult] = Field(
-        description="Detailed validation results for each field", default_factory=list
-    )
-    errors: List[str] = Field(description="List of validation errors", default_factory=list)
-    warnings: List[str] = Field(description="List of validation warnings", default_factory=list)
-    summary: str = Field(description="Summary of validation results")
 
 
 class ValidateInputFormat(BaseAgentTool[ValidateInputFormatInput, ValidateInputFormatOutput]):
@@ -201,14 +174,14 @@ class ValidateInputFormat(BaseAgentTool[ValidateInputFormatInput, ValidateInputF
                 return ValidationResult(
                     field_name=field_name,
                     is_valid=False,
-                    error_message=f"Field '{field_name}' is too short. Minimum length: {min_length}",
+                    error_message=f"Field '{field_name}' is too short. Minimum length: {min_length}, got: {len(value)}",
                 )
 
             if len(value) > max_length:
                 return ValidationResult(
                     field_name=field_name,
                     is_valid=False,
-                    error_message=f"Field '{field_name}' is too long. Maximum length: {max_length}",
+                    error_message=f"Field '{field_name}' is too long. Maximum length: {max_length}, got: {len(value)}",
                 )
 
         return ValidationResult(field_name=field_name, is_valid=True, error_message=None)
@@ -217,32 +190,34 @@ class ValidateInputFormat(BaseAgentTool[ValidateInputFormatInput, ValidateInputF
         """Perform strict validation checks.
 
         Args:
-            ad_data: Advertisement data
+            ad_data: Advertisement data to validate
 
         Returns:
             List of validation errors
         """
         errors = []
 
-        # Check for suspicious content
-        ad_content = ad_data.get("ad_content", "").lower()
+        # Check for empty strings
+        for key, value in ad_data.items():
+            if isinstance(value, str) and value.strip() == "":
+                errors.append(f"Field '{key}' cannot be empty")
 
-        # Check for empty or very short content
-        if len(ad_content.strip()) < 20:
-            errors.append("Ad content is too short for meaningful analysis")
+        # Check for suspicious content patterns
+        ad_content = ad_data.get("ad_content", "")
+        if isinstance(ad_content, str):
+            if ad_content.count("!") > 5:
+                errors.append("Ad content has too many exclamation marks")
 
-        # Check for placeholder text
-        placeholders = ["lorem ipsum", "placeholder", "sample text", "test ad"]
-        if any(placeholder in ad_content for placeholder in placeholders):
-            errors.append("Ad content appears to contain placeholder text")
+            if len(ad_content.split()) < 5:
+                errors.append("Ad content is too short for meaningful analysis")
 
         return errors
 
     def _perform_content_validation(self, ad_data: Dict[str, Any]) -> List[str]:
-        """Perform content quality validation.
+        """Perform content quality validation checks.
 
         Args:
-            ad_data: Advertisement data
+            ad_data: Advertisement data to validate
 
         Returns:
             List of validation warnings
@@ -250,24 +225,18 @@ class ValidateInputFormat(BaseAgentTool[ValidateInputFormatInput, ValidateInputF
         warnings = []
 
         ad_content = ad_data.get("ad_content", "")
+        if isinstance(ad_content, str):
+            # Check for uppercase content
+            if ad_content.isupper():
+                warnings.append("Ad content is all uppercase, which may appear aggressive")
 
-        # Check for potential issues
-        if not ad_content:
-            warnings.append("Ad content is empty")
-            return warnings
+            # Check for repeated words
+            words = ad_content.lower().split()
+            if len(words) != len(set(words)):
+                warnings.append("Ad content contains repeated words")
 
-        # Check for excessive punctuation
-        if ad_content.count("!") > 5:
-            warnings.append("Ad content contains excessive exclamation marks")
-
-        # Check for all caps (potential shouting)
-        if len(ad_content) > 50 and ad_content.isupper():
-            warnings.append("Ad content is written in all capital letters")
-
-        # Check for very long sentences
-        sentences = ad_content.split(".")
-        long_sentences = [s for s in sentences if len(s.strip()) > 200]
-        if long_sentences:
-            warnings.append(f"Ad content contains {len(long_sentences)} very long sentences")
+            # Check for missing punctuation
+            if not any(char in ad_content for char in ".!?"):
+                warnings.append("Ad content lacks proper punctuation")
 
         return warnings

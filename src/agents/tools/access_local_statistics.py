@@ -1,35 +1,13 @@
 """Tool for accessing local statistics and demographic data."""
 
-from typing import Any, Dict, List, Optional
-
-from pydantic import Field
-
-from src.agents.tools.base import BaseAgentTool, ToolInput, ToolOutput
+from src.agents.schemas.tools.access_local_statistics import (
+    AccessLocalStatisticsInput,
+    AccessLocalStatisticsOutput,
+)
+from src.agents.tools.base import BaseAgentTool
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-class AccessLocalStatisticsInput(ToolInput):
-    """Input for accessing local statistics."""
-
-    agent_id: str = Field(description="ID of the agent (prefecture)")
-    statistic_type: Optional[str] = Field(
-        description="Type of statistic to retrieve (e.g., 'demographics', 'economy', 'lifestyle')", default="general"
-    )
-
-
-class AccessLocalStatisticsOutput(ToolOutput):
-    """Output containing local statistics data."""
-
-    agent_id: str = Field(description="ID of the agent (prefecture)")
-    demographics: Dict[str, Any] = Field(description="Demographic information", default_factory=dict)
-    economic_indicators: Dict[str, Any] = Field(description="Economic indicators", default_factory=dict)
-    lifestyle_preferences: List[str] = Field(
-        description="Common lifestyle preferences in the region", default_factory=list
-    )
-    consumer_behavior: Dict[str, Any] = Field(description="Consumer behavior patterns", default_factory=dict)
-    regional_characteristics: List[str] = Field(description="Key characteristics of the region", default_factory=list)
 
 
 class AccessLocalStatistics(BaseAgentTool[AccessLocalStatisticsInput, AccessLocalStatisticsOutput]):
@@ -199,7 +177,7 @@ class AccessLocalStatistics(BaseAgentTool[AccessLocalStatisticsInput, AccessLoca
                     regional_characteristics=agent_stats.get("regional_characteristics", []),
                 )
             else:
-                # Return all statistics (general)
+                # Return all data (general)
                 output = AccessLocalStatisticsOutput(
                     success=True,
                     agent_id=agent_id,
@@ -210,11 +188,11 @@ class AccessLocalStatistics(BaseAgentTool[AccessLocalStatisticsInput, AccessLoca
                     regional_characteristics=agent_stats.get("regional_characteristics", []),
                 )
 
-            logger.info(f"Retrieved {statistic_type} statistics for agent {agent_id}")
+            logger.info(f"Successfully retrieved {statistic_type} statistics for {agent_id}")
             return output
 
         except Exception as e:
-            logger.error(f"Error accessing statistics for {agent_id}: {e}")
+            logger.error(f"Error accessing local statistics for {agent_id}: {e}")
             return AccessLocalStatisticsOutput(
                 success=False,
                 message=f"Failed to access statistics: {str(e)}",

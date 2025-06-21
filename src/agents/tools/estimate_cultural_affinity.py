@@ -1,41 +1,17 @@
 """Tool for estimating cultural affinity between ads and regional preferences."""
 
-from typing import List
-
-from pydantic import Field
-
-from src.agents.tools.base import BaseAgentTool, ToolInput, ToolOutput
+from src.agents.schemas.tools.estimate_cultural_affinity import (
+    AlignmentFactor,
+    EstimateCulturalAffinityInput,
+    EstimateCulturalAffinityOutput,
+)
+from src.agents.tools.base import BaseAgentTool
 from src.llm.chain.pydantic_chain import PydanticChain
 from src.llm.prompts.cultural_affinity import cultural_affinity_prompt
 from src.llm.schema.cultural_affinity import CulturalAffinityInput, CulturalAffinityOutput
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-class AlignmentFactor(ToolOutput):
-    """Factor that affects cultural alignment."""
-
-    factor: str = Field(description="Description of the alignment factor")
-    strength: float = Field(description="Strength of this factor (-1.0 to 1.0)", ge=-1.0, le=1.0)
-
-
-class EstimateCulturalAffinityInput(ToolInput):
-    """Input for estimating cultural affinity."""
-
-    agent_id: str = Field(description="ID of the agent (prefecture)")
-    ad_content: str = Field(description="Content of the ad to evaluate")
-
-
-class EstimateCulturalAffinityOutput(ToolOutput):
-    """Output containing cultural affinity estimation."""
-
-    affinity_score: float = Field(description="Cultural affinity score (0.0-1.0)", ge=0.0, le=1.0)
-    confidence: float = Field(description="Confidence in the estimation (0.0-1.0)", ge=0.0, le=1.0)
-    alignment_factors: List[AlignmentFactor] = Field(
-        description="Factors that contribute to the affinity score", default_factory=list
-    )
-    regional_insights: str = Field(description="Insights about how this ad aligns with regional culture")
 
 
 class EstimateCulturalAffinity(BaseAgentTool[EstimateCulturalAffinityInput, EstimateCulturalAffinityOutput]):
