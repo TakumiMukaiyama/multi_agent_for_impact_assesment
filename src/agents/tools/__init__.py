@@ -1,1 +1,1 @@
-# agent tools package initialization
+"""Tools for agent-based evaluation."""

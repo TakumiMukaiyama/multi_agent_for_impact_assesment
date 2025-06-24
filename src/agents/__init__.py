@@ -1,1 +1,1 @@
-# agents package initialization
+"""Agent module for the multi-agent impact assessment system."""
