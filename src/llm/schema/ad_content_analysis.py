@@ -1,75 +1,50 @@
-from typing import Dict, List, Optional
+"""Schemas for ad content analysis."""
+from typing import List
 from pydantic import Field
 
 from src.llm.dependancy.base import BaseInput, BaseOutput
 
 
 class AdContentAnalysisInput(BaseInput):
-    """Input schema for advertisement content analysis.
+    """Input for the ad content analysis chain."""
     
-    This is used when analyzing the content of an advertisement to extract
-    key features, themes, and target demographics.
-    """
-    ad_id: str = Field(
-        ..., 
-        description="The ID of the advertisement to analyze."
-    )
-    ad_title: str = Field(
-        ..., 
-        description="The title of the advertisement."
-    )
-    ad_content: str = Field(
-        ..., 
-        description="The textual content of the advertisement to analyze."
-    )
-    ad_category: Optional[str] = Field(
-        None, 
-        description="The category of the advertisement if known."
-    )
+    ad_id: str = Field(description="Unique identifier for the advertisement")
+    ad_content: str = Field(description="The content of the ad to be analyzed")
+    
 
 
 class AdContentAnalysisOutput(BaseOutput):
-    """Output schema for advertisement content analysis.
+    """Output from the ad content analysis chain."""
     
-    Contains structured information extracted from the advertisement content.
-    """
-    ad_id: str = Field(
-        ..., 
-        description="The ID of the analyzed advertisement."
+    category: str = Field(
+        description="Main category of the advertisement"
     )
-    primary_category: str = Field(
-        ..., 
-        description="The primary category of the advertisement."
+    subcategories: List[str] = Field(
+        description="Subcategories the ad fits into",
+        default_factory=list
     )
-    secondary_categories: List[str] = Field(
-        default_factory=list, 
-        description="Additional categories that apply to this advertisement."
+    target_demographic: List[str] = Field(
+        description="Target demographic groups for the ad",
+        default_factory=list
     )
-    target_demographics: Dict[str, float] = Field(
-        ..., 
-        description="Target demographic groups with estimated relevance scores (0.0-1.0)."
+    key_selling_points: List[str] = Field(
+        description="Key selling points or features emphasized in the ad",
+        default_factory=list
     )
-    key_themes: List[str] = Field(
-        ..., 
-        description="Main themes or topics addressed in the advertisement."
-    )
-    key_benefits: List[str] = Field(
-        ..., 
-        description="Key benefits or value propositions highlighted in the advertisement."
-    )
-    emotional_appeal: Dict[str, float] = Field(
-        ..., 
-        description="Emotional appeals used in the ad with estimated strength scores (0.0-1.0)."
-    )
-    cultural_context: List[str] = Field(
-        default_factory=list, 
-        description="Cultural contexts or references used in the advertisement."
+    emotional_appeal: List[str] = Field(
+        description="Types of emotional appeals used in the ad",
+        default_factory=list
     )
     tone: str = Field(
-        ..., 
-        description="Overall tone of the advertisement (e.g., 'informative', 'humorous', 'serious')."
+        description="Overall tone of the advertisement"
     )
-    call_to_action: Optional[str] = Field(
-        None, 
-        description="The main call to action in the advertisement, if present."
+    price_emphasis: float = Field(
+        description="Degree of emphasis on price (0-1)",
+        ge=0.0,
+        le=1.0
+    )
+    quality_emphasis: float = Field(
+        description="Degree of emphasis on quality (0-1)",
+        ge=0.0,
+        le=1.0
     )

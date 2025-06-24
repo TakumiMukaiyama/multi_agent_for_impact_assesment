@@ -16,6 +16,9 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "ray>=2.47.1",
     "ruff>=0.12.0",
+    "trulens>=1.5.2",
+    "trulens-providers-litellm>=1.5.2",
+    "trulens-providers-openai>=1.5.2",
     "typing-extensions>=4.14.0",
     "uvicorn>=0.34.3",
 ]
